@@ -16,3 +16,5 @@ export interface Session {
   employee: string;
   token: string;
 }
+
+export type Interval = Pick<Entry, 'id' | 'employee_id' | 'started_at' | 'ended_at'>;

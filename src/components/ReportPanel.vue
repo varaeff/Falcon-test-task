@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { Employee, Entry } from '../types';
+import type { Employee, Entry, Interval } from '../types';
 import { formatDuration } from '../domain/report';
 import EntryRow from './EntryRow.vue';
 defineProps<{
-  employees: Employee[];
-  entries: Entry[];
-  allEntries: Entry[];
+  groups: {
+    person: Employee;
+    entries: { entry: Entry; elapsed: number }[];
+    total: number;
+  }[];
   now: number;
   update: (
     id: string,
@@ -13,14 +15,15 @@ defineProps<{
     start: string,
     end: string
   ) => Promise<boolean>;
+  loadIntervals: () => Promise<Interval[] | null>;
   ownId: string;
   admin: boolean;
   from: string;
   to: string;
   valid: boolean;
   busy: boolean;
-  total: (id: string) => number;
-  entryDuration: (entry: Entry) => number;
+  operation: string;
+  refreshing: boolean;
 }>();
 const emit = defineEmits<{
   'update:from': [value: string];
@@ -57,37 +60,40 @@ const emit = defineEmits<{
       Выберите корректный период: начало не может быть позже окончания.
     </p>
     <template v-else>
+      <p v-if="refreshing" role="status" class="mt-3 text-xs text-slate-500">
+        Обновление отчёта…
+      </p>
       <details
-        v-for="person in employees.filter((person) => admin || person.id === ownId)"
-        :key="person.id"
+        v-for="group in groups.filter((group) => admin || group.person.id === ownId)"
+        :key="group.person.id"
         class="mt-4 rounded-xl border border-slate-200"
       >
         <summary
           class="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 marker:content-none"
         >
-          <span class="font-semibold">{{ person.name }}</span>
+          <span class="font-semibold">{{ group.person.name }}</span>
           <span class="flex items-center gap-3 text-sm font-semibold text-indigo-700"
-            >{{ formatDuration(total(person.id)) }}
-            <span aria-hidden="true">⌄</span></span
+            >{{ formatDuration(group.total) }} <span aria-hidden="true">⌄</span></span
           >
         </summary>
         <div class="px-4">
           <ul>
             <EntryRow
-              v-for="entry in entries.filter((item) => item.employee_id === person.id)"
+              v-for="{ entry, elapsed } in group.entries"
               :key="entry.id"
               :entry="entry"
-              :elapsed="entryDuration(entry)"
-              :own="person.id === ownId"
+              :elapsed="elapsed"
+              :own="group.person.id === ownId"
               :busy="busy"
-              :entries="allEntries"
+              :load-intervals="loadIntervals"
+              :operation="operation"
               :now="now"
               :update="update"
               @remove="(id) => emit('remove', id)"
             />
           </ul>
           <p
-            v-if="!entries.some((item) => item.employee_id === person.id)"
+            v-if="!group.entries.length"
             class="border-t border-slate-100 py-3 text-sm text-slate-400"
           >
             Нет записей за этот период.

@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { Employee } from '../types';
-defineProps<{ employees: Employee[]; busy: boolean }>();
+defineProps<{
+  employees: Employee[];
+  busy: boolean;
+  loading: boolean;
+  loaded: boolean;
+  operation: string;
+}>();
 const emit = defineEmits<{ login: [id: string] }>();
 const selected = ref('');
 </script>
@@ -45,9 +51,14 @@ const selected = ref('');
           />
         </svg>
       </div>
-      <button class="button" :disabled="busy || !selected">Войти</button>
-      <p v-if="!employees.length" class="text-sm text-slate-500">
-        Список сотрудников пуст или недоступен.
+      <button class="button" :disabled="busy || !selected">
+        {{ operation === 'login' ? 'Вход…' : 'Войти' }}
+      </button>
+      <p v-if="loading" role="status" class="text-sm text-slate-500">
+        Загрузка сотрудников…
+      </p>
+      <p v-else-if="loaded && !employees.length" class="text-sm text-slate-500">
+        Список сотрудников пуст.
       </p>
     </form>
   </section>

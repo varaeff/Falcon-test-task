@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { Entry } from '../types';
+import type { Entry, Interval } from '../types';
 import {
   formatCompactDuration,
   localDateTime,
@@ -11,7 +11,8 @@ const props = defineProps<{
   elapsed: number;
   own: boolean;
   busy: boolean;
-  entries: Entry[];
+  loadIntervals: () => Promise<Interval[] | null>;
+  operation: string;
   now: number;
   update: (
     id: string,
@@ -27,10 +28,17 @@ const editing = ref(false),
   description = ref(''),
   start = ref(''),
   end = ref('');
+const intervals = ref<Interval[]>([]);
+const loading = ref(false);
 const validation = computed(() =>
-  validateEntryInterval(start.value, end.value, props.entry, props.entries, props.now)
+  validateEntryInterval(start.value, end.value, props.entry, intervals.value, props.now)
 );
-function edit() {
+async function edit() {
+  loading.value = true;
+  const result = await props.loadIntervals();
+  loading.value = false;
+  if (!result) return;
+  intervals.value = result;
   description.value = props.entry.description;
   start.value = localDateTime(props.entry.started_at);
   end.value = localDateTime(props.entry.ended_at ?? props.entry.started_at);
@@ -44,18 +52,15 @@ async function save() {
     !description.value.trim()
   )
     return;
-  const from = new Date(start.value),
-    to = new Date(end.value);
-  if (Number.isFinite(from.getTime()) && Number.isFinite(to.getTime()))
-    if (
-      await props.update(
-        props.entry.id,
-        description.value,
-        from.toISOString(),
-        to.toISOString()
-      )
+  if (
+    await props.update(
+      props.entry.id,
+      description.value,
+      new Date(start.value).toISOString(),
+      new Date(end.value).toISOString()
     )
-      editing.value = false;
+  )
+    editing.value = false;
 }
 </script>
 
@@ -73,7 +78,7 @@ async function save() {
             step="1"
             class="input mt-1 w-full"
             :class="{
-              '!border-rose-600 !ring-2 !ring-rose-100': validation.invalidStart,
+              'border-rose-600! ring-2! ring-rose-100!': validation.invalidStart,
             }"
             :aria-invalid="validation.invalidStart"
             required /></label
@@ -84,7 +89,7 @@ async function save() {
             step="1"
             class="input mt-1 w-full"
             :class="{
-              '!border-rose-600 !ring-2 !ring-rose-100': validation.invalidEnd,
+              'border-rose-600! ring-2! ring-rose-100!': validation.invalidEnd,
             }"
             :aria-invalid="validation.invalidEnd"
             required
@@ -107,8 +112,8 @@ async function save() {
             !description.trim()
           "
         >
-          Сохранить</button
-        ><button type="button" @click="editing = false">Отмена</button>
+          {{ operation === `update:${entry.id}` ? 'Сохранение…' : 'Сохранить' }}</button
+        ><button type="button" :disabled="busy" @click="editing = false">Отмена</button>
       </div>
     </form>
     <template v-else
@@ -128,9 +133,10 @@ async function save() {
         </p>
       </div>
       <div v-if="own && entry.ended_at" class="mt-2 flex gap-4 text-xs font-semibold">
-        <button class="text-indigo-700" :disabled="busy" @click="edit">Изменить</button
+        <button class="text-indigo-700" :disabled="busy || loading" @click="edit">
+          {{ loading ? 'Загрузка…' : 'Изменить' }}</button
         ><button class="text-rose-700" :disabled="busy" @click="emit('remove', entry.id)">
-          Удалить
+          {{ operation === `remove:${entry.id}` ? 'Удаление…' : 'Удалить' }}
         </button>
       </div></template
     >

@@ -1,4 +1,4 @@
-import type { Entry } from '../types';
+import type { Entry, Interval } from '../types';
 
 export function dateInput(date: Date): string {
   const year = date.getFullYear();
@@ -29,15 +29,20 @@ export function duration(entry: Entry, range: [number, number], now: number): nu
     Math.min(end, range[1]) - Math.max(Date.parse(entry.started_at), range[0])
   );
 }
+function durationParts(milliseconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  return {
+    hours: Math.floor(totalSeconds / 3600),
+    minutes: Math.floor(totalSeconds / 60) % 60,
+    seconds: totalSeconds % 60,
+  };
+}
 export function formatDuration(milliseconds: number): string {
-  const seconds = Math.floor(milliseconds / 1000);
-  return `${Math.floor(seconds / 3600)} ч ${String(Math.floor(seconds / 60) % 60).padStart(2, '0')} мин ${String(seconds % 60).padStart(2, '0')} с`;
+  const { hours, minutes, seconds } = durationParts(milliseconds);
+  return `${hours} ч ${String(minutes).padStart(2, '0')} мин ${String(seconds).padStart(2, '0')} с`;
 }
 export function formatCompactDuration(milliseconds: number): string {
-  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor(totalSeconds / 60) % 60;
-  const seconds = totalSeconds % 60;
+  const { hours, minutes, seconds } = durationParts(milliseconds);
   const parts: string[] = [];
   if (hours) parts.push(`${hours} ч`);
   if (minutes) parts.push(`${minutes} мин`);
@@ -54,7 +59,7 @@ export function validateEntryInterval(
   start: string,
   end: string,
   entry: Entry,
-  entries: Entry[],
+  entries: Interval[],
   now: number
 ) {
   const from = Date.parse(start);

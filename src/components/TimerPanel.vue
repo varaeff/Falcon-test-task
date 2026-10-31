@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import type { Entry } from '../types';
 import { formatDuration } from '../domain/report';
-defineProps<{ active?: Entry; now: number; busy: boolean }>();
+defineProps<{ active?: Entry; now: number; busy: boolean; operation: string }>();
 const emit = defineEmits<{ start: [description: string]; stop: [] }>();
 const description = ref('');
 </script>
@@ -23,7 +23,7 @@ const description = ref('');
         Начало: {{ new Date(active.started_at).toLocaleString() }}
       </p>
       <button class="button mt-6" :disabled="busy" @click="emit('stop')">
-        Остановить
+        {{ operation === 'stop' ? 'Остановка…' : 'Остановить' }}
       </button>
     </template>
     <form
@@ -38,7 +38,9 @@ const description = ref('');
         placeholder="Над чем вы работаете?"
         aria-label="Описание задачи"
       />
-      <button class="button" :disabled="busy || !description.trim()">Запустить</button>
+      <button class="button" :disabled="busy || !description.trim()">
+        {{ operation === 'start' ? 'Запуск…' : 'Запустить' }}
+      </button>
     </form>
   </section>
 </template>

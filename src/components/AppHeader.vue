@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Employee } from '../types';
 
-defineProps<{ employee: Employee | null; busy: boolean }>();
+defineProps<{ employee: Employee | null; busy: boolean; operation: string }>();
 const emit = defineEmits<{ logout: [] }>();
 </script>
 
@@ -21,7 +21,7 @@ const emit = defineEmits<{ logout: [] }>();
           :disabled="busy"
           @click="emit('logout')"
         >
-          Выйти
+          {{ operation === 'logout' ? 'Выход…' : 'Выйти' }}
         </button>
       </div>
     </div>

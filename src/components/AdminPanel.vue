@@ -4,6 +4,7 @@ import type { Employee } from '../types';
 const props = defineProps<{
   employees: Employee[];
   busy: boolean;
+  operation: string;
   name: string;
 }>();
 const emit = defineEmits<{
@@ -33,7 +34,9 @@ const adminCount = computed(
         aria-label="Имя сотрудника"
         @input="emit('update:name', ($event.target as HTMLInputElement).value)"
       />
-      <button class="button" :disabled="busy || !name.trim()">Добавить</button>
+      <button class="button" :disabled="busy || !name.trim()">
+        {{ operation === 'add' ? 'Добавление…' : 'Добавить' }}
+      </button>
     </form>
     <ul class="mt-4 divide-y divide-slate-100">
       <li
@@ -55,7 +58,13 @@ const adminCount = computed(
           "
           @click="emit('role', person.id, !person.is_admin)"
         >
-          {{ person.is_admin ? 'Снять роль' : 'Назначить администратором' }}
+          {{
+            operation === `role:${person.id}`
+              ? 'Сохранение…'
+              : person.is_admin
+                ? 'Снять роль'
+                : 'Назначить администратором'
+          }}
         </button>
       </li>
     </ul>
